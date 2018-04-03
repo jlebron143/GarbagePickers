@@ -34,5 +34,17 @@ namespace GarbagePickers.Models
         {
             return new ApplicationDbContext();
         }
+
+        public System.Data.Entity.DbSet<GarbagePickers.Models.Address> Addresses { get; set; }
+
+        public System.Data.Entity.DbSet<GarbagePickers.Models.Bill> Bills { get; set; }
+
+        public System.Data.Entity.DbSet<GarbagePickers.Models.Customer> Customers { get; set; }
+
+        public System.Data.Entity.DbSet<GarbagePickers.Models.Schedule> Schedules { get; set; }
+
+        public System.Data.Entity.DbSet<GarbagePickers.Models.ApplicationUser> ApplicationUsers { get; set; }
+
+        public System.Data.Entity.DbSet<GarbagePickers.Models.RoleViewModel> RoleViewModels { get; set; }
     }
 }
