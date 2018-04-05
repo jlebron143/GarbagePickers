@@ -7,17 +7,25 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using GarbagePickers.Models;
+using Microsoft.AspNet.Identity;
+using Stripe;
+
 
 namespace GarbagePickers.Controllers
 {
+    [Authorize]
     public class CustomersController : Controller
     {
         private ApplicationDbContext db = new ApplicationDbContext();
 
         // GET: Customers
-        public ActionResult Index()
+        public ActionResult Index(string zipCode, string option)
         {
-            var customers = db.Customers.Include(c => c.Address).Include(c => c.Bill).Include(c => c.Schedule).Include(c => c.User);
+            if (!String.IsNullOrEmpty(zipCode))
+            {
+                return View(db.Customers.Include(c => c.Address).Include(c => c.Schedule).Where(x => x.Address.ZipCode.Equals(zipCode) && x.PickUpDate == option).ToList());
+            }
+            var customers = db.Customers.Include(c => c.Address).Include(c => c.Bill).Include(c => c.Schedule);
             return View(customers.ToList());
         }
 
@@ -26,9 +34,16 @@ namespace GarbagePickers.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                TempData["Message"] = "Please login to access that information!";
+                return RedirectToAction("Confirmation");
             }
-            Customer customer = db.Customers.Find(id);
+
+            Customer customer = db.Customers
+                                .Include(c => c.Address)
+                                .Include(c => c.Bill)
+                                .Include(c => c.Schedule)
+                                .SingleOrDefault(x => x.CustomerID == id);
+
             if (customer == null)
             {
                 return HttpNotFound();
@@ -36,13 +51,22 @@ namespace GarbagePickers.Controllers
             return View(customer);
         }
 
+        public ActionResult FindMe(string input)
+        {
+            if (input == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            return View(db.Customers.Include(c => c.Address).Include(c => c.Schedule).Where(x => x.UserID == input).ToList());
+        }
+
         // GET: Customers/Create
         public ActionResult Create()
         {
             ViewBag.AddressID = new SelectList(db.Addresses, "AddressId", "StreetAddress");
             ViewBag.BillId = new SelectList(db.Bills, "BillId", "BillId");
-            ViewBag.ScheduleId = new SelectList(db.Schedules, "ScheduleID", "PickUpFrequency");
-            ViewBag.UserID = new SelectList(db.ApplicationUsers, "Id", "Email");
+            ViewBag.ScheduleID = new SelectList(db.Schedules, "ScheduleID", "PickUpFrequency");
             return View();
         }
 
@@ -51,19 +75,22 @@ namespace GarbagePickers.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "CustomerID,FirstName,LastName,PhoneNumber,PickUpDate,UserID,BlackOutStart,BlackOutEnd,hasPaid,AddressID,BillId,ScheduleId")] Customer customer)
+        public ActionResult Create([Bind(Include = "CustomerID,FirstName,LastName,PhoneNumber,PickUpDate,AddressID,BillId,ScheduleID")] Customer customer)
         {
             if (ModelState.IsValid)
             {
+                customer.UserID = User.Identity.GetUserId();
                 db.Customers.Add(customer);
                 db.SaveChanges();
-                return RedirectToAction("Index");
+                TempData["Message"] = "Profile has been saved!";
+                return RedirectToAction("Confirmation");
+                //return RedirectToAction("Index");
+
             }
 
             ViewBag.AddressID = new SelectList(db.Addresses, "AddressId", "StreetAddress", customer.AddressID);
             ViewBag.BillId = new SelectList(db.Bills, "BillId", "BillId", customer.BillId);
             ViewBag.ScheduleId = new SelectList(db.Schedules, "ScheduleID", "PickUpFrequency", customer.ScheduleId);
-            ViewBag.UserID = new SelectList(db.ApplicationUsers, "Id", "Email", customer.UserID);
             return View(customer);
         }
 
@@ -82,7 +109,6 @@ namespace GarbagePickers.Controllers
             ViewBag.AddressID = new SelectList(db.Addresses, "AddressId", "StreetAddress", customer.AddressID);
             ViewBag.BillId = new SelectList(db.Bills, "BillId", "BillId", customer.BillId);
             ViewBag.ScheduleId = new SelectList(db.Schedules, "ScheduleID", "PickUpFrequency", customer.ScheduleId);
-            ViewBag.UserID = new SelectList(db.ApplicationUsers, "Id", "Email", customer.UserID);
             return View(customer);
         }
 
@@ -91,19 +117,21 @@ namespace GarbagePickers.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "CustomerID,FirstName,LastName,PhoneNumber,PickUpDate,UserID,BlackOutStart,BlackOutEnd,hasPaid,AddressID,BillId,ScheduleId")] Customer customer)
+        public ActionResult Edit([Bind(Include = "CustomerID,FirstName,LastName,PhoneNumber,PickUpDate,BlackOutStart,BlackOutEnd,AddressID,BillId,ScheduleID")] Customer customer)
         {
             if (ModelState.IsValid)
             {
+                customer.UserID = User.Identity.GetUserId();
                 db.Entry(customer).State = EntityState.Modified;
                 db.SaveChanges();
-                return RedirectToAction("Index");
+                TempData["Message"] = "Profile has been updated!";
+                return RedirectToAction("Confirmation");
             }
             ViewBag.AddressID = new SelectList(db.Addresses, "AddressId", "StreetAddress", customer.AddressID);
             ViewBag.BillId = new SelectList(db.Bills, "BillId", "BillId", customer.BillId);
             ViewBag.ScheduleId = new SelectList(db.Schedules, "ScheduleID", "PickUpFrequency", customer.ScheduleId);
-            ViewBag.UserID = new SelectList(db.ApplicationUsers, "Id", "Email", customer.UserID);
             return View(customer);
+
         }
 
         // GET: Customers/Delete/5
@@ -113,7 +141,10 @@ namespace GarbagePickers.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Customer customer = db.Customers.Find(id);
+            Customer customer = db.Customers
+                               .Include(c => c.Address)
+                               .Include(c => c.Bill)
+                               .SingleOrDefault(x => x.CustomerID == id);
             if (customer == null)
             {
                 return HttpNotFound();
@@ -122,6 +153,7 @@ namespace GarbagePickers.Controllers
         }
 
         // POST: Customers/Delete/5
+        [Authorize(Roles = "Admin")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public ActionResult DeleteConfirmed(int id)
@@ -139,6 +171,43 @@ namespace GarbagePickers.Controllers
                 db.Dispose();
             }
             base.Dispose(disposing);
+        }
+
+        public ActionResult Confirmation()
+        {
+            return View();
+        }
+
+        ////public ActionResult Charge(string stripeEmail, string stripeToken)
+        ////{
+        ////    StripeConfiguration.SetApiKey("");
+        ////    var customers = new StripeCustomerService();
+        ////    var charges = new StripeChargeService();
+
+        ////    var customer = customers.Create(new StripeCustomerCreateOptions
+        ////    {
+        ////        Email = stripeEmail,
+        ////        SourceToken = stripeToken
+        ////    });
+
+        ////    var charge = charges.Create(new StripeChargeCreateOptions
+        ////    {
+        ////        Amount = 3575,
+        ////        Description = "Garbage Bill",
+        ////        Currency = "usd",
+        ////        CustomerId = customer.Id
+        ////    });
+
+        ////    //Customer updateCustomer = db.Customers.Find(id);
+        ////    //updateCustomer.hasPaid = true; 
+        ////    // update the current user hasPaid to true here
+
+        ////    return View();
+        ////}
+
+        public ActionResult Error()
+        {
+            return View();
         }
     }
 }

@@ -1,17 +1,39 @@
-﻿@{
-    ViewBag.Title = "Contact";
+﻿
+@{
+    ViewBag.Title = "Contact Milwaukee Waste Management";
 }
-<h2>@ViewBag.Title.</h2>
-<h3>@ViewBag.Message</h3>
+<div class="row top-buffer">
+    <h2>@ViewBag.Title</h2>
+</div>
+<div class="row">
+    <h3>@ViewBag.Message</h3>
+    <address>
+        123 Main St.<br />
+        MIlwaukee, WI 53201<br />
+        <abbr title="Phone">P:</abbr>
+        555.555.5555
+    </address>
+</div>
+<div class="row bottom-buffer">
+    <address>
+        <strong>Support:</strong>   <a href="mailto:Support@example.com">Support@mwm.com</a><br />
+        <strong>Billing:</strong> <a href="mailto:Marketing@example.com">Billing@mwm.com</a>
+    </address>
+</div>
 
-<address>
-    One Microsoft Way<br />
-    Redmond, WA 98052-6399<br />
-    <abbr title="Phone">P:</abbr>
-    425.555.0100
-</address>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBUBB9Y1Zp2XUbMxdoBx59gnumFO9bJfiM"></script>
+<script type="text/javascript">
+    $(document).ready(function myMap() {
+        var cudahy = new google.maps.LatLng(43.08, -87.88);
+        var mapCanvas = document.getElementById("map");
+        var mapOptions = { center: cudahy, zoom: 9 };
+        var map = new google.maps.Map(mapCanvas, mapOptions);
 
-<address>
-    <strong>Support:</strong>   <a href="mailto:Support@example.com">Support@example.com</a><br />
-    <strong>Marketing:</strong> <a href="mailto:Marketing@example.com">Marketing@example.com</a>
-</address>
+        var marker = new google.maps.Marker({
+            position: cudahy,
+            map: map
+        });
+    });
+</script>
+<div class="row top-buffer" id="map"></div>

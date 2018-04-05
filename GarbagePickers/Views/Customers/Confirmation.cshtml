@@ -1,0 +1,15 @@
+﻿@model GarbagePickers.Models.Customer
+
+@{
+    ViewBag.Title = "Confirmation";
+}
+
+<h2>Confirmation Page</h2>
+
+@{
+    string message = TempData["Message"] as string;
+    if (message != null)
+    {
+        <div class="alert-message">@message</div>
+    }
+}
